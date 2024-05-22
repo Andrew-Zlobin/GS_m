@@ -105,6 +105,14 @@ class OptimizationParams(ParamGroup):
         super().__init__(parser, "Optimization Parameters")
 
 def get_combined_args(parser : ArgumentParser):
+    model = ModelParams(parser, sentinel=True)
+    pipeline = PipelineParams(parser)
+    icommaparams = iComMaParams(parser)
+    parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--output_path", default='output', type=str,help="output path")
+    parser.add_argument("--obs_img_index", default=0, type=int)
+    parser.add_argument("--delta", default="[30,10,10,0.1,0.1,0.1]", type=str)
+    parser.add_argument("--iteration", default=-1, type=int)
     cmdlne_string = sys.argv[1:]
     cfgfile_string = "Namespace()"
     args_cmdline = parser.parse_args(cmdlne_string)
@@ -124,4 +132,4 @@ def get_combined_args(parser : ArgumentParser):
     for k,v in vars(args_cmdline).items():
         if v != None:
             merged_dict[k] = v
-    return Namespace(**merged_dict)
+    return Namespace(**merged_dict), model, pipeline, icommaparams

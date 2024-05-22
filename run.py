@@ -5,7 +5,6 @@ from scene import Scene
 import torch.optim as optim
 from os import makedirs
 from gaussian_renderer import render
-from utils.general_utils import safe_state
 from utils.calculate_error_utils import cal_campose_error
 from argparse import ArgumentParser
 from arguments import ModelParams, PipelineParams,iComMaParams, get_combined_args
@@ -105,15 +104,8 @@ def camera_pose_estimation(gaussians:GaussianModel, background:torch.tensor, pip
 if __name__ == "__main__":
     # Set up command line argument parser
     parser = ArgumentParser(description="Camera pose estimation parameters")
-    model = ModelParams(parser, sentinel=True)
-    pipeline = PipelineParams(parser)
-    icommaparams = iComMaParams(parser)
-    parser.add_argument("--quiet", action="store_true")
-    parser.add_argument("--output_path", default='output', type=str,help="output path")
-    parser.add_argument("--obs_img_index", default=0, type=int)
-    parser.add_argument("--delta", default="[30,10,10,0.1,0.1,0.1]", type=str)
-    parser.add_argument("--iteration", default=-1, type=int)
-    args = get_combined_args(parser)
+    
+    args, model, pipeline, icommaparams = get_combined_args(parser)
    
     # Initialize system state (RNG)
     # safe_state(args.quiet)

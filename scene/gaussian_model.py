@@ -19,26 +19,26 @@ from plyfile import PlyData, PlyElement
 from utils.sh_utils import RGB2SH
 from simple_knn._C import distCUDA2
 from utils.graphics_utils import BasicPointCloud
-from utils.general_utils import strip_symmetric, build_scaling_rotation
+from utils.general_utils import strip_lowerdiag, build_scaling_rotation
 
 class GaussianModel:
 
-    def setup_functions(self):
-        # def build_covariance_from_scaling_rotation(scaling, scaling_modifier, rotation):
-        #     L = build_scaling_rotation(scaling_modifier * scaling, rotation)
-        #     actual_covariance = L @ L.transpose(1, 2)
-        #     symm = strip_symmetric(actual_covariance)
-        #     return symm
+    # def setup_functions(self):
+    #     # def build_covariance_from_scaling_rotation(scaling, scaling_modifier, rotation):
+    #     #     L = build_scaling_rotation(scaling_modifier * scaling, rotation)
+    #     #     actual_covariance = L @ L.transpose(1, 2)
+    #     #     symm = strip_symmetric(actual_covariance)
+    #     #     return symm
         
-        self.scaling_activation = torch.exp
-        self.scaling_inverse_activation = torch.log
+    #     self.scaling_activation = torch.exp
+    #     self.scaling_inverse_activation = torch.log
 
-        # self.covariance_activation = build_covariance_from_scaling_rotation
+    #     # self.covariance_activation = build_covariance_from_scaling_rotation
 
-        self.opacity_activation = torch.sigmoid
-        self.inverse_opacity_activation = inverse_sigmoid
+    #     self.opacity_activation = torch.sigmoid
+    #     self.inverse_opacity_activation = inverse_sigmoid
 
-        self.rotation_activation = torch.nn.functional.normalize
+    #     self.rotation_activation = torch.nn.functional.normalize
 
 
     def __init__(self, sh_degree : int):
@@ -56,7 +56,17 @@ class GaussianModel:
         self.optimizer = None
         self.percent_dense = 0
         self.spatial_lr_scale = 0
-        self.setup_functions()
+        
+        # self.setup_functions()
+
+        self.scaling_activation = torch.exp
+        self.scaling_inverse_activation = torch.log
+
+        self.opacity_activation = torch.sigmoid
+        self.inverse_opacity_activation = inverse_sigmoid
+
+        self.rotation_activation = torch.nn.functional.normalize
+
 
     def capture(self):
         return (
@@ -117,7 +127,7 @@ class GaussianModel:
     def get_covariance(self, scaling_modifier = 1):
         L = build_scaling_rotation(scaling_modifier * self.get_scaling, self._rotation)
         actual_covariance = L @ L.transpose(1, 2)
-        symm = strip_symmetric(actual_covariance)
+        symm = strip_lowerdiag(actual_covariance)
         return symm
         # return self.covariance_activation(self.get_scaling, scaling_modifier, self._rotation)
     

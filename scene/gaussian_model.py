@@ -24,16 +24,16 @@ from utils.general_utils import strip_symmetric, build_scaling_rotation
 class GaussianModel:
 
     def setup_functions(self):
-        def build_covariance_from_scaling_rotation(scaling, scaling_modifier, rotation):
-            L = build_scaling_rotation(scaling_modifier * scaling, rotation)
-            actual_covariance = L @ L.transpose(1, 2)
-            symm = strip_symmetric(actual_covariance)
-            return symm
+        # def build_covariance_from_scaling_rotation(scaling, scaling_modifier, rotation):
+        #     L = build_scaling_rotation(scaling_modifier * scaling, rotation)
+        #     actual_covariance = L @ L.transpose(1, 2)
+        #     symm = strip_symmetric(actual_covariance)
+        #     return symm
         
         self.scaling_activation = torch.exp
         self.scaling_inverse_activation = torch.log
 
-        self.covariance_activation = build_covariance_from_scaling_rotation
+        # self.covariance_activation = build_covariance_from_scaling_rotation
 
         self.opacity_activation = torch.sigmoid
         self.inverse_opacity_activation = inverse_sigmoid
@@ -115,7 +115,12 @@ class GaussianModel:
         return self.opacity_activation(self._opacity)
     
     def get_covariance(self, scaling_modifier = 1):
-        return self.covariance_activation(self.get_scaling, scaling_modifier, self._rotation)
+        L = build_scaling_rotation(scaling_modifier * self.get_scaling, self._rotation)
+        actual_covariance = L @ L.transpose(1, 2)
+        symm = strip_symmetric(actual_covariance)
+        return symm
+        # return self.covariance_activation(self.get_scaling, scaling_modifier, self._rotation)
+    
 
     def oneupSHdegree(self):
         if self.active_sh_degree < self.max_sh_degree:

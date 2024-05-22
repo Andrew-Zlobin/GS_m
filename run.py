@@ -1,4 +1,6 @@
 import torch
+import numpy as np
+import random
 from scene import Scene
 import torch.optim as optim
 from os import makedirs
@@ -114,7 +116,11 @@ if __name__ == "__main__":
     args = get_combined_args(parser)
    
     # Initialize system state (RNG)
-    safe_state(args.quiet)
+    # safe_state(args.quiet)
+    random.seed(0)
+    np.random.seed(0)
+    torch.manual_seed(0)
+    torch.cuda.set_device(torch.device("cuda:0"))
 
     makedirs(args.output_path, exist_ok=True)
     

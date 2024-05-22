@@ -109,6 +109,8 @@ def build_scaling_rotation(s, r):
     L = R @ L
     return L
 
+
+# to remove
 def safe_state(silent):
     old_f = sys.stdout
     class F:

@@ -101,7 +101,10 @@ def camera_pose_estimation(gaussians:GaussianModel, background:torch.tensor, pip
     # output gif
     if icommaparams.OVERLAY is True:
         imageio.mimwrite(os.path.join(output_path, 'video.gif'), imgs, fps=8)
-  
+        ref = to8b(query_image.permute(1, 2, 0).cpu().detach().numpy())
+        filename = os.path.join('ref.png')
+        imageio.imwrite(filename, ref)
+
 if __name__ == "__main__":
 
     args, model, pipeline, icommaparams = get_combined_args()

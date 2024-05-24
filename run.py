@@ -78,6 +78,9 @@ def camera_pose_estimation(gaussians:GaussianModel, background:torch.tensor, pip
             print_stat(k, matching_flag, loss_matching, loss_comparing, 
                        camera_pose, gt_pose_c2w)
             # output images
+
+            print("current_campose_c2w = ", camera_pose.current_campose_c2w())
+
             if icommaparams.OVERLAY is True:
                 with torch.no_grad():
                     rgb = rendering.clone().permute(1, 2, 0).cpu().detach().numpy()
@@ -87,6 +90,7 @@ def camera_pose_estimation(gaussians:GaussianModel, background:torch.tensor, pip
                     dst = cv2.addWeighted(rgb8, 0.7, ref, 0.3, 0)
                     imageio.imwrite(filename, dst)
                     imgs.append(dst)
+
 
         optimizer.zero_grad()
         loss.backward()

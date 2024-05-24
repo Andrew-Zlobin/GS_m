@@ -47,6 +47,9 @@ class Camera_Pose(nn.Module):
     def current_campose_c2w(self):
         return self.pose_w2c.inverse().clone().cpu().detach().numpy()
 
+
+    # такое ощущение, что update можно выкинуть
+    
     def update(self):
         self.world_view_transform = self.pose_w2c.transpose(0, 1).cuda()
         self.projection_matrix = getProjectionMatrix(znear=self.znear, zfar=self.zfar, fovX=self.FoVx, fovY=self.FoVy).transpose(0,1).cuda()

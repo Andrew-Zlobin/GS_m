@@ -104,7 +104,8 @@ class OptimizationParams(ParamGroup):
         self.random_background = False
         super().__init__(parser, "Optimization Parameters")
 
-def get_combined_args(parser : ArgumentParser):
+def get_combined_args(): # parser : ArgumentParser):
+    parser = ArgumentParser(description="Camera pose estimation parameters")
     model = ModelParams(parser, sentinel=True)
     pipeline = PipelineParams(parser)
     icommaparams = iComMaParams(parser)

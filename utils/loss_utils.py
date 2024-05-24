@@ -27,6 +27,13 @@ def loss_mse(reder_img,gt):
     loss2 = loss_fn(reder_img,gt)
     return loss2
 
+def loss_Huber(reder_img,gt):
+    loss_fn = torch.nn.HuberLoss()
+    loss2 = loss_fn(reder_img,gt)
+    return loss2
+
+
+
 def loss_loftr(q_img,r_img,matcher,threshold,min_num_points):
     q_img_gray=rgb2loftrgray(q_img)
     r_img_gray = rgb2loftrgray(r_img)

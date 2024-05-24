@@ -14,6 +14,8 @@ import sys
 from datetime import datetime
 import numpy as np
 import random
+from utils.calculate_error_utils import cal_campose_error
+
 
 def inverse_sigmoid(x):
     return torch.log(x/(1-x))
@@ -72,7 +74,22 @@ def strip_lowerdiag(L):
     uncertainty[:, 5] = L[:, 2, 2]
     return uncertainty
 
+def print_stat(k, matching_flag, loss_matching, loss_comparing, camera_pose, gt_pose_c2w):
+    print('Step: ', k)
+    if matching_flag and loss_matching is not None:
+        print('Matching Loss: ', loss_matching.item())
+    print('Comparing Loss: ', loss_comparing.item())
+    # print('Loss: ', loss.item())
 
+    # record error
+    with torch.no_grad():
+        cur_pose_c2w= camera_pose.current_campose_c2w()
+        rot_error,translation_error=cal_campose_error(cur_pose_c2w,gt_pose_c2w)
+        print('Rotation error: ', rot_error)
+        print('Translation error: ', translation_error)
+        print('-----------------------------------')
+        
+    
 
 def build_rotation(r):
     norm = torch.sqrt(r[:,0]*r[:,0] + r[:,1]*r[:,1] + r[:,2]*r[:,2] + r[:,3]*r[:,3])

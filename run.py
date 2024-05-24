@@ -5,11 +5,10 @@ from scene import Scene
 import torch.optim as optim
 from os import makedirs
 from gaussian_renderer import render
-from utils.calculate_error_utils import cal_campose_error
-from argparse import ArgumentParser
 from arguments import ModelParams, PipelineParams,iComMaParams, get_combined_args
 from gaussian_renderer import GaussianModel
 from utils.icomma_helper import load_LoFTR, get_pose_estimation_input
+from utils.general_utils import print_stat
 from utils.image_utils import to8b
 import cv2
 import imageio
@@ -18,6 +17,7 @@ import ast
 from scene.cameras import Camera_Pose
 from utils.loss_utils import loss_loftr,loss_mse
 
+                
 def camera_pose_estimation(gaussians:GaussianModel, background:torch.tensor, pipeline:PipelineParams, icommaparams:iComMaParams, icomma_info, output_path):
     # start pose & gt pose
     gt_pose_c2w=icomma_info.gt_pose_c2w
@@ -35,17 +35,26 @@ def camera_pose_estimation(gaussians:GaussianModel, background:torch.tensor, pip
     imgs=[]
     
     matching_flag= not icommaparams.deprecate_matching
+    num_iter_matching = 0
 
     # start optimizing
     optimizer = optim.Adam(camera_pose.parameters(),lr = icommaparams.camera_pose_lr)
-    iter = icommaparams.pose_estimation_iter
-    num_iter_matching = 0
-    for k in range(iter):
+    
+    for k in range(icommaparams.pose_estimation_iter):
 
-        rendering = render(camera_pose,gaussians, pipeline, background,compute_grad_cov2d = icommaparams.compute_grad_cov2d)["render"]
+        rendering = render(camera_pose,
+                           gaussians, 
+                           pipeline, 
+                           background,
+                           compute_grad_cov2d = icommaparams.compute_grad_cov2d)#["render"]
 
         if matching_flag:
-            loss_matching = loss_loftr(query_image,rendering,LoFTR_model,icommaparams.confidence_threshold_LoFTR,icommaparams.min_matching_points)
+            loss_matching = loss_loftr(query_image,
+                                       rendering,
+                                       LoFTR_model,
+                                       icommaparams.confidence_threshold_LoFTR,
+                                       icommaparams.min_matching_points)
+            
             loss_comparing = loss_mse(rendering,query_image)
             
             if loss_matching is None:
@@ -66,20 +75,8 @@ def camera_pose_estimation(gaussians:GaussianModel, background:torch.tensor, pip
         
         # output intermediate results
         if (k + 1) % 20 == 0 or k == 0:
-            print('Step: ', k)
-            if matching_flag and loss_matching is not None:
-                print('Matching Loss: ', loss_matching.item())
-            print('Comparing Loss: ', loss_comparing.item())
-            print('Loss: ', loss.item())
-
-            # record error
-            with torch.no_grad():
-                cur_pose_c2w= camera_pose.current_campose_c2w()
-                rot_error,translation_error=cal_campose_error(cur_pose_c2w,gt_pose_c2w)
-                print('Rotation error: ', rot_error)
-                print('Translation error: ', translation_error)
-                print('-----------------------------------')
-               
+            print_stat(k, matching_flag, loss_matching, loss_comparing, 
+                       camera_pose, gt_pose_c2w)
             # output images
             if icommaparams.OVERLAY is True:
                 with torch.no_grad():
@@ -102,21 +99,18 @@ def camera_pose_estimation(gaussians:GaussianModel, background:torch.tensor, pip
         imageio.mimwrite(os.path.join(output_path, 'video.gif'), imgs, fps=4)
   
 if __name__ == "__main__":
-    # Set up command line argument parser
-    parser = ArgumentParser(description="Camera pose estimation parameters")
+
+    args, model, pipeline, icommaparams = get_combined_args()
+
+    makedirs(args.output_path, exist_ok=True)
     
-    args, model, pipeline, icommaparams = get_combined_args(parser)
-   
-    # Initialize system state (RNG)
-    # safe_state(args.quiet)
+    # load LoFTR_model
     random.seed(0)
     np.random.seed(0)
     torch.manual_seed(0)
     torch.cuda.set_device(torch.device("cuda:0"))
 
-    makedirs(args.output_path, exist_ok=True)
-    
-    # load LoFTR_model
+
     LoFTR_model=load_LoFTR(icommaparams.LoFTR_ckpt_path,icommaparams.LoFTR_temp_bug_fix)
     
     # load gaussians

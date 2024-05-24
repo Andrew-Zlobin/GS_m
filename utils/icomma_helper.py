@@ -27,6 +27,9 @@ rot_theta = lambda th: np.array([
         [np.sin(th), 0, np.cos(th), 0],
         [0, 0, 0, 1]])
 
+
+# TODO: заменить на обычные, а то капец
+
 rot_phi = lambda psi: np.array([
         [np.cos(psi), -np.sin(psi), 0, 0],
         [np.sin(psi), np.cos(psi), 0, 0],

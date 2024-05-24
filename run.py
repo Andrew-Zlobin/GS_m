@@ -74,7 +74,7 @@ def camera_pose_estimation(gaussians:GaussianModel, background:torch.tensor, pip
                 param_group['lr'] = new_lrate
         
         # output intermediate results
-        if (k + 1) % 20 == 0 or k == 0:
+        if (k + 1) % 10 == 0 or k == 0:
             print_stat(k, matching_flag, loss_matching, loss_comparing, 
                        camera_pose, gt_pose_c2w)
             # output images
@@ -85,11 +85,11 @@ def camera_pose_estimation(gaussians:GaussianModel, background:torch.tensor, pip
                 with torch.no_grad():
                     rgb = rendering.clone().permute(1, 2, 0).cpu().detach().numpy()
                     rgb8 = to8b(rgb)
-                    ref = to8b(query_image.permute(1, 2, 0).cpu().detach().numpy())
+                    # ref = to8b(query_image.permute(1, 2, 0).cpu().detach().numpy())
                     filename = os.path.join(output_path, str(k)+'.png')
-                    dst = cv2.addWeighted(rgb8, 0.7, ref, 0.3, 0)
-                    imageio.imwrite(filename, dst)
-                    imgs.append(dst)
+                    #dst = cv2.addWeighted(rgb8, 0.7, ref, 0.3, 0)
+                    imageio.imwrite(filename, rgb8)#, dst)
+                    imgs.append(rgb8)#dst)
 
 
         optimizer.zero_grad()
@@ -100,7 +100,7 @@ def camera_pose_estimation(gaussians:GaussianModel, background:torch.tensor, pip
 
     # output gif
     if icommaparams.OVERLAY is True:
-        imageio.mimwrite(os.path.join(output_path, 'video.gif'), imgs, fps=4)
+        imageio.mimwrite(os.path.join(output_path, 'video.gif'), imgs, fps=8)
   
 if __name__ == "__main__":
 

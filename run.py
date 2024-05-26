@@ -106,7 +106,10 @@ def draw_camera_in_top_camera(icomma_info, viewpoint_camera, pc : GaussianModel,
     rgb8 = to8b(rgb)
     filename = os.path.join('rendering.png')
     imageio.imwrite(filename, rgb8)
-    return camera_b_view, image_coordinates_B.clone().cpu().detach().numpy()
+    cam_centre = image_coordinates_B.clone().cpu().detach().numpy()
+    cam_centre = (int(cam_centre[0]), int(cam_centre[1]))
+    # cv2.circle(to8b(camera_b_view.clone().cpu().detach().numpy()), cam_centre, 5, (0,255,0), thickness=1, lineType=8, shift=0)
+    return to8b(camera_b_view.clone().cpu().detach().numpy()), cam_centre
 
 
                 

@@ -17,6 +17,37 @@ import ast
 from scene.cameras import Camera_Pose
 from utils.loss_utils import loss_loftr,loss_mse
 
+
+rot_psi = lambda phi: np.array([
+        [1, 0, 0, 0],
+        [0, np.cos(phi), -np.sin(phi), 0],
+        [0, np.sin(phi), np.cos(phi), 0],
+        [0, 0, 0, 1]])
+
+rot_theta = lambda th: np.array([
+        [np.cos(th), 0, -np.sin(th), 0],
+        [0, 1, 0, 0],
+        [np.sin(th), 0, np.cos(th), 0],
+        [0, 0, 0, 1]])
+
+
+# TODO: заменить на обычные, а то капец
+
+rot_phi = lambda psi: np.array([
+        [np.cos(psi), -np.sin(psi), 0, 0],
+        [np.sin(psi), np.cos(psi), 0, 0],
+        [0, 0, 1, 0],
+        [0, 0, 0, 1]])
+
+def trans_t_xyz(tx, ty, tz):
+    T = np.array([
+        [1, 0, 0, tx],
+        [0, 1, 0, ty],
+        [0, 0, 1, tz],
+        [0, 0, 0, 1]
+    ])
+    return T
+
 def draw_camera_in_top_camera(icomma_info, viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None, compute_grad_cov2d=True):
     
     # Пример матрицы start_pose_c2w
@@ -32,7 +63,10 @@ def draw_camera_in_top_camera(icomma_info, viewpoint_camera, pc : GaussianModel,
 
     # Пример матрицы преобразования от мира к камере B (обратная матрица к start_pose_c2w)
     # Предположим, что это просто тождественное преобразование
-    world_to_cameraB = torch.tensor(np.linalg.inv(np.eye(4)), dtype=torch.float32).cuda()
+    world_to_cameraB = torch.tensor(np.linalg.inv(
+        #np.eye(4)
+        trans_t_xyz(0,0,0) @ rot_phi(90/180.*np.pi) @ rot_theta(0/180.*np.pi) @ rot_psi(0/180.*np.pi)
+        ), dtype=torch.float32).cuda()
     camera_pose = Camera_Pose(world_to_cameraB,FoVx=icomma_info.FoVx,FoVy=icomma_info.FoVy,
                             image_width=icomma_info.image_width,image_height=icomma_info.image_height)
     camera_pose.cuda()

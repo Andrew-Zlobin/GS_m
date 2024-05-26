@@ -106,7 +106,7 @@ def draw_camera_in_top_camera(icomma_info, viewpoint_camera, pc : GaussianModel,
     rgb8 = to8b(rgb)
     filename = os.path.join('rendering.png')
     imageio.imwrite(filename, rgb8)
-    return image_coordinates_B.clone().cpu().detach().numpy()
+    return camera_b_view, image_coordinates_B.clone().cpu().detach().numpy()
 
 
                 
@@ -115,6 +115,7 @@ def camera_pose_estimation(gaussians:GaussianModel, background:torch.tensor, pip
     gt_pose_c2w=icomma_info.gt_pose_c2w
     start_pose_w2c=icomma_info.start_pose_w2c.cuda()
     camera_poses_sequence = []
+    camera_b_view_query = []
     # query_image for comparing 
     query_image = icomma_info.query_image.cuda()
 
@@ -171,10 +172,14 @@ def camera_pose_estimation(gaussians:GaussianModel, background:torch.tensor, pip
                        camera_pose, gt_pose_c2w)
             # output images
             matrix_pose_c2w_to_top_camera = camera_pose.current_campose_c2w()
-            camera_poses_sequence.append(draw_camera_in_top_camera(icomma_info, matrix_pose_c2w_to_top_camera, gaussians, 
+            a, b = draw_camera_in_top_camera(icomma_info, matrix_pose_c2w_to_top_camera, gaussians, 
                            pipeline, 
                            background,
-                           compute_grad_cov2d = icommaparams.compute_grad_cov2d))
+                           compute_grad_cov2d = icommaparams.compute_grad_cov2d)
+            a
+            camera_poses_sequence.append(b)
+            camera_b_view_query.append(a)
+            print(a)
             print("current_campose_c2w = ", matrix_pose_c2w_to_top_camera)
 
             if icommaparams.OVERLAY is True:
@@ -195,6 +200,15 @@ def camera_pose_estimation(gaussians:GaussianModel, background:torch.tensor, pip
         camera_pose(start_pose_w2c)
 
     print(camera_poses_sequence)
+    # camera_b_view = to8b(render(camera_pose,
+    #                        gaussians, 
+    #                        pipeline, 
+    #                        background,
+    #                        compute_grad_cov2d = icommaparams.compute_grad_cov2d).clone().permute(1, 2, 0).cpu().detach().numpy())
+    for camera_poses_point in camera_poses_sequence:
+        cv2.circle(camera_b_view_query[0], camera_poses_point, 5, (0,255,0), thickness=1, lineType=8, shift=0)
+    imageio.imwrite('camera_path.png', rgb8)
+    
 
     # output gif
     if icommaparams.OVERLAY is True:

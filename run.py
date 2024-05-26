@@ -62,10 +62,13 @@ def draw_camera_in_top_camera(icomma_info, viewpoint_camera, pc : GaussianModel,
     
 
     # Пример матрицы преобразования от мира к камере B (обратная матрица к start_pose_c2w)
-    # Предположим, что это просто тождественное преобразование
+    # Предположим, что это просто нихуя не тождественное преобразование
     world_to_cameraB = torch.tensor(np.linalg.inv(
         #np.eye(4)
-        trans_t_xyz(0,0,0) @ rot_phi(90/180.*np.pi) @ rot_theta(0/180.*np.pi) @ rot_psi(0/180.*np.pi)
+        # rot_phi - поворот вокруг оптической оси камеры
+        # rot_theta - поворот "налево"
+        # rot_psi - поворот вверх-вниз
+        trans_t_xyz(0,-10,0) @ rot_phi(0/180.*np.pi) @ rot_theta(0/180.*np.pi) @ rot_psi(-90/180.*np.pi)
         ), dtype=torch.float32).cuda()
     camera_pose = Camera_Pose(world_to_cameraB,FoVx=icomma_info.FoVx,FoVy=icomma_info.FoVy,
                             image_width=icomma_info.image_width,image_height=icomma_info.image_height)
@@ -84,8 +87,11 @@ def draw_camera_in_top_camera(icomma_info, viewpoint_camera, pc : GaussianModel,
     # Параметры проекции камеры B
     # Фокусное расстояние, координаты центра изображения, коэффициенты искажения и т. д.
     # Предположим, что они известны
-    focal_length = 100
-    image_center = torch.tensor(np.array([320, 240]), dtype=torch.float32).cuda()  # Пример координат центра изображения
+    focal_length = 200 
+    # ((camera_b_view.shape[1] / (2 * np.tan(icomma_info.FoVy / 2))) 
+    #                 + 
+    #                 (camera_b_view.shape[2] / (2 * np.tan(icomma_info.FoVx / 2)))) / 2
+    image_center = torch.tensor(np.array([camera_b_view.shape[1] / 2, camera_b_view.shape[2] / 2]), dtype=torch.float32).cuda()  # Пример координат центра изображения
     distortion_coeffs = np.zeros(5)  # Пример коэффициентов искажения
 
     # Преобразование координат камеры в пространстве B в координаты на изображении
@@ -94,12 +100,13 @@ def draw_camera_in_top_camera(icomma_info, viewpoint_camera, pc : GaussianModel,
     camera_coordinates_B = cameraB_pose[:3, 3]
     image_coordinates_B = (focal_length * camera_coordinates_B[:2] / camera_coordinates_B[2]) + image_center
 
-    print("Координаты камеры на изображении с камеры B:", image_coordinates_B)
-    # print("camera_b_view = ", camera_b_view)
+    # print("Координаты камеры на изображении с камеры B:", image_coordinates_B)
+    # print("camera_b_view = ", camera_b_view.shape)
     rgb = camera_b_view.clone().permute(1, 2, 0).cpu().detach().numpy()
     rgb8 = to8b(rgb)
     filename = os.path.join('rendering.png')
     imageio.imwrite(filename, rgb8)
+    return image_coordinates_B.clone().cpu().detach().numpy()
 
 
                 
@@ -107,7 +114,7 @@ def camera_pose_estimation(gaussians:GaussianModel, background:torch.tensor, pip
     # start pose & gt pose
     gt_pose_c2w=icomma_info.gt_pose_c2w
     start_pose_w2c=icomma_info.start_pose_w2c.cuda()
-    
+    camera_poses_sequence = []
     # query_image for comparing 
     query_image = icomma_info.query_image.cuda()
 
@@ -164,10 +171,10 @@ def camera_pose_estimation(gaussians:GaussianModel, background:torch.tensor, pip
                        camera_pose, gt_pose_c2w)
             # output images
             matrix_pose_c2w_to_top_camera = camera_pose.current_campose_c2w()
-            draw_camera_in_top_camera(icomma_info, matrix_pose_c2w_to_top_camera, gaussians, 
+            camera_poses_sequence.append(draw_camera_in_top_camera(icomma_info, matrix_pose_c2w_to_top_camera, gaussians, 
                            pipeline, 
                            background,
-                           compute_grad_cov2d = icommaparams.compute_grad_cov2d)
+                           compute_grad_cov2d = icommaparams.compute_grad_cov2d))
             print("current_campose_c2w = ", matrix_pose_c2w_to_top_camera)
 
             if icommaparams.OVERLAY is True:
@@ -186,6 +193,8 @@ def camera_pose_estimation(gaussians:GaussianModel, background:torch.tensor, pip
         optimizer.step()
 
         camera_pose(start_pose_w2c)
+
+    print(camera_poses_sequence)
 
     # output gif
     if icommaparams.OVERLAY is True:

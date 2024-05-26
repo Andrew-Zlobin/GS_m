@@ -17,6 +17,50 @@ import ast
 from scene.cameras import Camera_Pose
 from utils.loss_utils import loss_loftr,loss_mse
 
+def draw_camera_in_top_camera(icomma_info, viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None, compute_grad_cov2d=True):
+    
+    # Пример матрицы start_pose_c2w
+    start_pose_c2w = viewpoint_camera
+    # np.array([
+    #     [0.866, -0.5, 0, 1],
+    #     [0.5, 0.866, 0, 2],
+    #     [0, 0, 1, 3],
+    #     [0, 0, 0, 1]
+    # ])
+    
+    
+
+    # Пример матрицы преобразования от мира к камере B (обратная матрица к start_pose_c2w)
+    # Предположим, что это просто тождественное преобразование
+    world_to_cameraB = np.linalg.inv(np.eye(4))
+    camera_pose = Camera_Pose(world_to_cameraB,FoVx=icomma_info.FoVx,FoVy=icomma_info.FoVy,
+                            image_width=icomma_info.image_width,image_height=icomma_info.image_height)
+    camera_pose.cuda()
+    # camera_pose для камеры с видом сверху
+    camera_b_view = render(camera_pose,
+                           gaussians, 
+                           pipeline, 
+                           background,
+                           compute_grad_cov2d = icommaparams.compute_grad_cov2d)
+
+    # Положение камеры в пространстве B
+    cameraB_pose = world_to_cameraB @ start_pose_c2w
+
+    # Параметры проекции камеры B
+    # Фокусное расстояние, координаты центра изображения, коэффициенты искажения и т. д.
+    # Предположим, что они известны
+    focal_length = 100
+    image_center = np.array([320, 240])  # Пример координат центра изображения
+    distortion_coeffs = np.zeros(5)  # Пример коэффициентов искажения
+
+    # Преобразование координат камеры в пространстве B в координаты на изображении
+    # Это может быть выполнено с использованием функции проекции, например, функции cv2.projectPoints в OpenCV
+    # Здесь просто приведен пример для наглядности
+    camera_coordinates_B = cameraB_pose[:3, 3]
+    image_coordinates_B = (focal_length * camera_coordinates_B[:2] / camera_coordinates_B[2]) + image_center
+
+    print("Координаты камеры на изображении с камеры B:", image_coordinates_B)
+
                 
 def camera_pose_estimation(gaussians:GaussianModel, background:torch.tensor, pipeline:PipelineParams, icommaparams:iComMaParams, icomma_info, output_path):
     # start pose & gt pose
@@ -78,8 +122,12 @@ def camera_pose_estimation(gaussians:GaussianModel, background:torch.tensor, pip
             print_stat(k, matching_flag, loss_matching, loss_comparing, 
                        camera_pose, gt_pose_c2w)
             # output images
-
-            print("current_campose_c2w = ", camera_pose.current_campose_c2w())
+            matrix_pose_c2w_to_top_camera = camera_pose.current_campose_c2w()
+            draw_camera_in_top_camera(icomma_info, matrix_pose_c2w_to_top_camera, gaussians, 
+                           pipeline, 
+                           background,
+                           compute_grad_cov2d = icommaparams.compute_grad_cov2d)
+            print("current_campose_c2w = ", matrix_pose_c2w_to_top_camera)
 
             if icommaparams.OVERLAY is True:
                 with torch.no_grad():

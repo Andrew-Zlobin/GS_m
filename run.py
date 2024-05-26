@@ -20,7 +20,7 @@ from utils.loss_utils import loss_loftr,loss_mse
 def draw_camera_in_top_camera(icomma_info, viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None, compute_grad_cov2d=True):
     
     # Пример матрицы start_pose_c2w
-    start_pose_c2w = viewpoint_camera
+    start_pose_c2w = torch.tensor(viewpoint_camera, dtype=torch.float32).cuda()
     # np.array([
     #     [0.866, -0.5, 0, 1],
     #     [0.5, 0.866, 0, 2],
@@ -32,7 +32,7 @@ def draw_camera_in_top_camera(icomma_info, viewpoint_camera, pc : GaussianModel,
 
     # Пример матрицы преобразования от мира к камере B (обратная матрица к start_pose_c2w)
     # Предположим, что это просто тождественное преобразование
-    world_to_cameraB = np.linalg.inv(np.eye(4))
+    world_to_cameraB = torch.tensor(np.linalg.inv(np.eye(4)), dtype=torch.float32).cuda()
     camera_pose = Camera_Pose(world_to_cameraB,FoVx=icomma_info.FoVx,FoVy=icomma_info.FoVy,
                             image_width=icomma_info.image_width,image_height=icomma_info.image_height)
     camera_pose.cuda()
@@ -44,13 +44,14 @@ def draw_camera_in_top_camera(icomma_info, viewpoint_camera, pc : GaussianModel,
                            compute_grad_cov2d = icommaparams.compute_grad_cov2d)
 
     # Положение камеры в пространстве B
+    # print(type(world_to_cameraB), type(start_pose_c2w))
     cameraB_pose = world_to_cameraB @ start_pose_c2w
 
     # Параметры проекции камеры B
     # Фокусное расстояние, координаты центра изображения, коэффициенты искажения и т. д.
     # Предположим, что они известны
     focal_length = 100
-    image_center = np.array([320, 240])  # Пример координат центра изображения
+    image_center = torch.tensor(np.array([320, 240]), dtype=torch.float32).cuda()  # Пример координат центра изображения
     distortion_coeffs = np.zeros(5)  # Пример коэффициентов искажения
 
     # Преобразование координат камеры в пространстве B в координаты на изображении
@@ -60,6 +61,12 @@ def draw_camera_in_top_camera(icomma_info, viewpoint_camera, pc : GaussianModel,
     image_coordinates_B = (focal_length * camera_coordinates_B[:2] / camera_coordinates_B[2]) + image_center
 
     print("Координаты камеры на изображении с камеры B:", image_coordinates_B)
+    # print("camera_b_view = ", camera_b_view)
+    rgb = camera_b_view.clone().permute(1, 2, 0).cpu().detach().numpy()
+    rgb8 = to8b(rgb)
+    filename = os.path.join('rendering.png')
+    imageio.imwrite(filename, rgb8)
+
 
                 
 def camera_pose_estimation(gaussians:GaussianModel, background:torch.tensor, pipeline:PipelineParams, icommaparams:iComMaParams, icomma_info, output_path):
